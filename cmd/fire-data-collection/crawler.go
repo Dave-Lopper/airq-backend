@@ -33,7 +33,6 @@ type Fire struct {
 
 func CrawlApi(days string, startDate string) {
 	fullyQualifiedUrl := fmt.Sprintf("%v/%v/%v", baseUrl, days, startDate)
-	fmt.Printf("Full URL: %v", fullyQualifiedUrl)
 	response, err := http.Get(fullyQualifiedUrl)
 
 	if err != nil {
@@ -69,61 +68,41 @@ func CrawlApi(days string, startDate string) {
 			log.Fatal(err)
 		}
 
-		brightness, err := strconv.ParseFloat(record[2], 64)
-		if err != nil {
-			fmt.Printf("Error converting brightness to float: %v", err)
-			return
-		}
-
-		scan, scanErr := strconv.ParseFloat(record[3], 64)
-		if scanErr != nil {
-			fmt.Printf("Error converting scan to float: %v", err)
-			return
-		}
-
-		track, trackErr := strconv.ParseFloat(record[4], 64)
-		if trackErr != nil {
-			fmt.Printf("Error converting track to float: %v", err)
-			return
-		}
-
-		confidence, confidenceErr := strconv.ParseInt(record[9], 10, 64)
-		if confidenceErr != nil {
-			fmt.Printf("Error converting confidence to int: %v", err)
-			return
-		}
-
-		brightT31, brightT31Err := strconv.ParseFloat(record[11], 64)
-		if brightT31Err != nil {
-			fmt.Printf("Error converting brightT31 to float: %v", err)
-			return
-		}
-
-		frp, frpErr := strconv.ParseFloat(record[12], 64)
-		if frpErr != nil {
-			fmt.Printf("Error converting frp to float: %v", err)
-			return
-		}
-
-		fire := Fire{
+		fires = append(fires, Fire{
 			record[0],
 			record[1],
-			brightness,
-			scan,
-			track,
+			convertRecordVal[float64]("brightness", record[2]),
+			convertRecordVal[float64]("scan", record[3]),
+			convertRecordVal[float64]("track", record[4]),
 			record[5],
 			record[6],
 			record[7],
 			record[8],
-			confidence,
+			convertRecordVal[int64]("confidence", record[9]),
 			record[10],
-			brightT31,
-			frp,
+			convertRecordVal[float64]("brightT31", record[11]),
+			convertRecordVal[float64]("frp", record[12]),
 			record[13],
-		}
-		fmt.Printf("%v", fire)
-		fires = append(fires, fire)
+		})
 	}
 
 	fmt.Printf("Fires: %v", fires)
+}
+
+func convertRecordVal[T int64 | float64](name string, recordVal string) T {
+	if strings.ContainsAny(recordVal, ".") {
+		convertedVal, err := strconv.ParseFloat(recordVal, 64)
+		if err != nil {
+			fmt.Printf("Error converting %v to float: %v", name, err)
+			panic(err)
+		} 
+		return T(convertedVal)
+	} else {
+		convertedVal, err := strconv.ParseInt(recordVal, 10, 64)
+		if err != nil {
+			fmt.Printf("Error converting %v to int: %v", name, err)
+			panic(err)
+		}
+		return T(convertedVal)
+	}
 }
