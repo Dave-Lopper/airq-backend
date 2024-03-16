@@ -2,9 +2,12 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"log"
 	"strconv"
 	"time"
+
+	"github.com/Dave-Lopper/airq-backend/internals/db"
 )
 
 func main() {
@@ -37,5 +40,33 @@ func main() {
 		startDate = now
 	}
 
-	CrawlApi(strconv.Itoa(*days), startDate.Format(dateLayout))
+	fires, err := CrawlApi(strconv.Itoa(*days), startDate.Format(dateLayout))
+	if err != nil {
+		log.Fatalf("Error crawling API: %v", err)
+		panic(err)
+	}
+
+	goquDB := db.GetConnection()
+	exists, err := db.TableExists(goquDB, "t_fires")
+	if err != nil {
+		log.Fatalf("Error while checking if table exists: %v", err)
+		panic(err)
+	}
+
+	if exists {
+		fmt.Println("Table t_fires exists")
+	} else {
+		fmt.Println("Table t_fires doesn't exist, creating it")
+		err := db.CreateTable(goquDB)
+		if err != nil {
+			log.Fatalf("Error while creating t_fires table: %v", err)
+			panic(err)
+		}
+	}
+
+
+	insertErr := db.InsertFires(goquDB, fires)
+	if insertErr != nil {
+		panic(insertErr)
+	}
 }
